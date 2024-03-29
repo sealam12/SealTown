@@ -250,17 +250,19 @@ namespace SealTown
         public Area[] accessibleAreas;
         public Generator[] generatorsInArea;
         public Item[] itemsRequiredToEnter;
+        public Quest[] questsInArea;
 
-
-
-
-        public void create(string newAreaName, Item[] newItemsInArea, Area[] newAccessibleAreas, Generator[] newGeneratorsInArea, Item[] newItemsRequiredToEnter)
+        public void create(string newAreaName, Item[] newItemsInArea, Area[] newAccessibleAreas, Generator[] newGeneratorsInArea, Item[] newItemsRequiredToEnter, Quest[] newQuestsInArea=null)
         {
             this.name = newAreaName;
             this.itemsInArea = newItemsInArea;
             this.accessibleAreas = newAccessibleAreas;
             this.generatorsInArea = newGeneratorsInArea;
             this.itemsRequiredToEnter = newItemsRequiredToEnter;
+            if (newQuestsInArea != null)
+            {
+                this.questsInArea = newQuestsInArea;
+            }
         }
         public void viewItems()
         {
@@ -392,162 +394,74 @@ namespace SealTown
         {
             foreach (string dialoguePiece in this.startDialogue)
             {
-                Console.WriteLine(dialoguePiece);
+                Console.Write(dialoguePiece + "(ENTR to continue)");
+                Console.ReadLine();
             }
             this.started = true;
         }
-        
-        public string checkFinishedOrStarted()
+        public void finishQuest()
         {
-            if (this.started)
+            Console.WriteLine("Quest " + this.name + " Completed. Reward:");
+            switch (this.rewardType)
             {
-                if (this.finished)
-                {
-                    return "finished";
-                }
-                else
-                {
-                    return "started";
-                }
+                case "item":
+                    Console.WriteLine("Items:");
+                    foreach (Item item in this.itemReward)
+                    {
+                        Console.WriteLine(" - " + item.name);
+                        GameVariables.player.addItem(item);
+                    }
+                    break;
+                case "generator":
+                    Console.WriteLine("Generator Starts:");
+                    foreach (Generator gen in this.generatorReward)
+                    {
+                        Console.WriteLine(" - " + gen.name);
+                        gen.started = true;
+                    }
+                    break;
+                case "recipe":
+                    Console.WriteLine("Recipe Unlocks:");
+                    foreach (CraftingRecipe recipe in this.recipeReward)
+                    {
+                        Console.WriteLine(" - " + recipe.name);
+                        GameVariables.player.unlockedRecipes = GameVariables.player.unlockedRecipes.Concat(new CraftingRecipe[] { recipe }).ToArray();
+                    }
+                    break;
+                case "xp":
+                    Console.WriteLine("Currently deppreciated");
+                    break;
             }
-            else
-            {
-                return "not started";
-            }
-            return null;
         }
 
         public Item[] supplyItems(Item[] items)
         {
             Item[] returnList = {};
+            int itemsSupplied = 0;
             foreach (Item item in items)
             {
                 if (Array.IndexOf(this.itemsToComplete, item) > -1)
                 {
+                    itemsSupplied += 1;
                     this.itemsToComplete = GlobalFunctions.RemoveItemAt(this.itemsToComplete, Array.IndexOf(this.itemsToComplete, item));
                     returnList = GlobalFunctions.RemoveItemAt(items, Array.IndexOf(items, item));
                 }
             }
+            if (itemsSupplied == 0)
+            {
+                foreach (string str in this.notCompleteDialogue)
+                {
+                    Console.WriteLine(str);
+                }
+            }
+            if (itemsSupplied >= this.itemsToComplete.Length)
+            {
+                this.finishQuest();
+            }
             return returnList;
         }
     }
-    /*public class Entity
-    {
-        public string name;
-        public int health;
-        public bool hostile;
-
-        public void create(string newName, int newHealth, bool newHostile)
-        {
-            this.name = newName;
-            this.health = newHealth;
-            this.hostile = newHostile;
-        }
-        public void shoot(int index)
-        {
-            Console.Clear();
-
-            string lyr1 = "[1] [2] [3] [4]";
-            string lyr2 = "";
-            for (int i=0;i<4;i++)
-            {
-                if (i==index)
-                {
-                    lyr2 += "    ";
-                }
-                else
-                {
-                    lyr2 += " #  ";
-                }
-            }
-            Console.WriteLine(lyr1);
-            Console.WriteLine(lyr2);
-        }
-        public void fightScene()
-        {
-            bool attacking = true;
-            while (attacking)
-            {
-                bool attack = false;
-                Random rndInt = new Random();
-                int rnd =  rndInt.Next(0, 4);
-                char currentKey = ' ';
-                switch (rnd) 
-                {
-                    case 0:
-                        currentKey = 'A';
-                        break;
-                    case 1:
-                        currentKey = 'S';
-                        break;
-                    case 2:
-                        currentKey = 'D';
-                        break;
-                    case 3:
-                        currentKey = 'F';
-                        break;
-                }
-                
-                Console.WriteLine(currentKey);
-
-                int timeout = 2000; // 5 seconds
-                DateTime startTime = DateTime.Now;
-
-                while (!Console.KeyAvailable)
-                {
-                    // Check if the timeout has been reached
-                    if ((DateTime.Now - startTime).TotalMilliseconds >= timeout)
-                    {
-                        if (!attack)
-                        {
-                            GameVariables.player.health -= 20;
-                        }
-                        break;
-                    }
-                    Thread.Sleep(100);
-                }
-
-                while (Console.KeyAvailable)
-                {
-                    ConsoleKeyInfo keyInfo = Console.ReadKey(intercept: true);
-                    switch (currentKey)
-                    {
-                        case 'A':
-                            if (keyInfo.Key == ConsoleKey.A)
-                            {
-                                
-                            }
-                            break;
-                        case 'S':
-                            if (keyInfo.Key == ConsoleKey.S)
-                            {
-                                Console.WriteLine("\ncorrect key pressed!");
-                                // Handle 'A' key logic here
-                            }
-                            break;
-                        case 'D':
-                            if (keyInfo.Key == ConsoleKey.D)
-                            {
-                                Console.WriteLine("\ncorrect key pressed!");
-                                // Handle 'A' key logic here
-                            }
-                            break;
-                        case 'F':
-                            if (keyInfo.Key == ConsoleKey.F)
-                            {
-                                Console.WriteLine("\ncorrect key pressed!");
-                                // Handle 'A' key logic here
-                            }
-                            break;
-                    }
-                }
-
-                // Continue with the rest of your program
-                Console.WriteLine("Continuing...");
-            }
-        }
-    }*/
-
+ 
     public class Player
     {
         public Area areaPosition = GameVariables.items.Base;
@@ -723,7 +637,7 @@ namespace SealTown
         }
         public string gameIteration()
         {
-            Console.WriteLine("Craft | Q\nMove | W\nInventory | E\nView Items | R\nPickup Items | T\nInspect Areas | A\nUse Generator | S\nStart Generator | D\nView Unlocked Recipes | Z\nSave Game | =\nEnd Game | \\");
+            Console.WriteLine("Craft | Q\nMove | W\nInventory | E\nView Items | R\nPickup Items | T\nInspect Areas | A\nUse Generator | S\nStart Generator | D\nView Unlocked Recipes | Z\nView Available Quests | O\nView Current Quests | P\nSupply Quest | I\nSave Game | =\nEnd Game | \\");
             Console.Write("> ");
             return Console.ReadLine();
         }
@@ -763,7 +677,7 @@ namespace SealTown
                 }
                 catch
                 {
-                    Console.WriteLine("Most sincere apologies, but your save code is either invalid or corrupted. Make sure it's exactly as you copied it.");
+                    Console.WriteLine("Most sincere apologies, but your save code is either invalid or corrupted. Make sure it's exactly as you copied it, with no imperfections.");
                     Console.WriteLine("NOTICE: ALL SAVE CODES FROM VERSIONS LESS THAN 1.0.2 ARE DEPRECIATED AND NO LONGER WORK.");
                 }
             }
@@ -991,6 +905,23 @@ namespace SealTown
                                 foreach (Item item in recipe.itemsOut)
                                 {
                                     Console.WriteLine("   - " + item.name);
+                                }
+                            }
+                            break;
+                        case "O":
+                            if (GameVariables.player.areaPosition.questsInArea == null)
+                            {
+                                Console.WriteLine("No available quests in this area at the moment. Check back later!");
+                                break;
+                            }
+                            Area areaCurr = GameVariables.player.areaPosition;
+                            int index = 0;
+                            foreach (Quest quest in areaCurr.questsInArea)
+                            {
+                                if (!quest.finished)
+                                {
+                                    Console.WriteLine(quest.name +  " " + index);
+                                    index += 1;
                                 }
                             }
                             break;
