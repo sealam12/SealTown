@@ -373,7 +373,7 @@ namespace SealTown
         public int xpReward;
 
         public string[] startDialogue;
-        public string[] notCompleteDialogue;
+        public string[] noItemsDialogue;
         public string[] finishedDialogue;
 
         public bool started = false;
@@ -388,6 +388,8 @@ namespace SealTown
             this.recipeReward = newRecipeReward;
             this.generatorReward = newGeneratorReward;
             this.startDialogue = newDialogue1;
+            this.noItemsDialogue = newDialogue1;
+            this.finishedDialogue = newDialogue3;
         }
 
         public void startQuest()
@@ -429,7 +431,7 @@ namespace SealTown
                     }
                     break;
                 case "xp":
-                    Console.WriteLine("Currently deppreciated");
+                    Console.WriteLine("Currently deprecated");
                     break;
             }
         }
@@ -449,7 +451,7 @@ namespace SealTown
             }
             if (itemsSupplied == 0)
             {
-                foreach (string str in this.notCompleteDialogue)
+                foreach (string str in this.noItemsDialogue)
                 {
                     Console.WriteLine(str);
                 }
