@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace SealTown
 {
-    public static class GameVariables
+    public static class Game
     {
         public static GameItems items = new GameItems(); // Get our game items
 
@@ -46,21 +46,21 @@ namespace SealTown
                 case "grant":
                     if (parsed[1] == "player")
                     {
-                        foreach (Item item in GameVariables.items.allItems)
+                        foreach (Item item in Game.items.allItems)
                         {
                             Console.WriteLine(item.name + " == " + parsed[2] + " - " + (item.name == parsed[2] ? "Y" : "N"));
                             if (item.name == parsed[2])
                             {
                                 for (int i=0;i<int.Parse(parsed[3]);i++)
                                 {
-                                    GameVariables.player.addItem(item);
+                                    Game.player.addItem(item);
                                 }
                                 if (item.recipeUnlocks != null)
                                 {
                                     CraftingRecipe[] totalUnlocks = {};
                                     foreach (CraftingRecipe recipe in item.recipeUnlocks)
                                     {
-                                        if (Array.IndexOf(GameVariables.player.unlockedRecipes, recipe) < 0)
+                                        if (Array.IndexOf(Game.player.unlockedRecipes, recipe) < 0)
                                         {
                                             totalUnlocks = totalUnlocks.Concat(new CraftingRecipe[] {recipe}).ToArray();
                                         }
@@ -72,7 +72,7 @@ namespace SealTown
                                         {
                                             Console.WriteLine(" - " + recipe.name);
                                         }
-                                        GameVariables.player.unlockedRecipes = GameVariables.player.unlockedRecipes.Concat(item.recipeUnlocks).ToArray();
+                                        Game.player.unlockedRecipes = Game.player.unlockedRecipes.Concat(item.recipeUnlocks).ToArray();
                                     }
                                 }
                             }
@@ -87,13 +87,15 @@ namespace SealTown
     {
         public string name;
         public int itemSize;
+        public int itemValue; // determines XP gain
         public CraftingRecipe[] recipeUnlocks;
 
-        public void create(string newName, int newItemSize, CraftingRecipe[] newRecipeUnlocks=null)
+        public void create(string newName, int newItemSize, CraftingRecipe[] newRecipeUnlocks=null, int newItemValue=1)
         {
             this.name = newName;
             this.itemSize = newItemSize;
             this.recipeUnlocks = newRecipeUnlocks;
+            this.itemValue = newItemValue;
         }
     }
     public class CraftingRecipe
@@ -230,7 +232,7 @@ namespace SealTown
                         this.started = true;
                         foreach (Item item in this.startItem)
                         {
-                            GameVariables.player.inventory = GlobalFunctions.RemoveItemAt(GameVariables.player.inventory, Array.IndexOf(GameVariables.player.inventory, item));
+                            Game.player.inventory = GlobalFunctions.RemoveItemAt(Game.player.inventory, Array.IndexOf(Game.player.inventory, item));
                         }
                         Console.WriteLine("Generator Started.");
                     }
@@ -298,7 +300,7 @@ namespace SealTown
                 try {
                     foreach (Item item in areaMove.itemsRequiredToEnter)
                     {
-                        if (Array.IndexOf(GameVariables.player.inventory, item) > -1)
+                        if (Array.IndexOf(Game.player.inventory, item) > -1)
                         {
                             found += 1;
                         }
@@ -411,7 +413,7 @@ namespace SealTown
                     foreach (Item item in this.itemReward)
                     {
                         Console.WriteLine(" - " + item.name);
-                        GameVariables.player.addItem(item);
+                        Game.player.addItem(item);
                     }
                     break;
                 case "generator":
@@ -427,7 +429,7 @@ namespace SealTown
                     foreach (CraftingRecipe recipe in this.recipeReward)
                     {
                         Console.WriteLine(" - " + recipe.name);
-                        GameVariables.player.unlockedRecipes = GameVariables.player.unlockedRecipes.Concat(new CraftingRecipe[] { recipe }).ToArray();
+                        Game.player.unlockedRecipes = Game.player.unlockedRecipes.Concat(new CraftingRecipe[] { recipe }).ToArray();
                     }
                     break;
                 case "xp":
@@ -466,13 +468,20 @@ namespace SealTown
  
     public class Player
     {
-        public Area areaPosition = GameVariables.items.Base;
-        public Item[] inventory = {GameVariables.items.wood};
+        public Area areaPosition = Game.items.Base;
+        public Item[] inventory = {Game.items.wood};
         public int inventorySpace = 100;
         public int health = 100;
 
+        // crafting xp, mining xp, combat xp, bartering xp
+        public int[] experience = {
+            0, // crafting
+            0, // mining
+            0, // combat
+            0 // bartering
+        };
 
-        public CraftingRecipe[] unlockedRecipes = {GameVariables.items.sticksRecipe, GameVariables.items.fireRecipe};
+        public CraftingRecipe[] unlockedRecipes = {Game.items.sticksRecipe, Game.items.fireRecipe};
 
         public void displayInventory()
         {
@@ -510,7 +519,7 @@ namespace SealTown
     }
 
     // GAME
-    public class Game
+    public class GameSession
     {
         public bool GameRunning = true;
         public void endGame()
@@ -522,11 +531,11 @@ namespace SealTown
             String[] seperator = {":"};
             Int32 count = 100000000;
             String[] saveSplit = saveCode.Split(seperator, count, StringSplitOptions.None);
-            foreach (Area area in GameVariables.items.allAreas)
+            foreach (Area area in Game.items.allAreas)
             {
                 if (area.name == saveSplit[0])
                 {
-                    GameVariables.player.areaPosition = area;
+                    Game.player.areaPosition = area;
                 }
             }
             String[] seperator2 = {","};
@@ -536,7 +545,7 @@ namespace SealTown
                 try
                 {
                     int indexNum = int.Parse(itemNum);
-                    GameVariables.player.addItem(GameVariables.items.allItems[indexNum]);
+                    Game.player.addItem(Game.items.allItems[indexNum]);
                 }
                 catch
                 {
@@ -550,10 +559,10 @@ namespace SealTown
                 try
                 {
                     int indexNum2 = int.Parse(string4);
-                    CraftingRecipe recipeToUnlock = GameVariables.items.allRecipes[indexNum2];
-                    if (Array.IndexOf(GameVariables.player.unlockedRecipes, recipeToUnlock) < 0)
+                    CraftingRecipe recipeToUnlock = Game.items.allRecipes[indexNum2];
+                    if (Array.IndexOf(Game.player.unlockedRecipes, recipeToUnlock) < 0)
                     {
-                        GameVariables.player.unlockedRecipes = GameVariables.player.unlockedRecipes.Concat(new CraftingRecipe[] {recipeToUnlock}).ToArray();
+                        Game.player.unlockedRecipes = Game.player.unlockedRecipes.Concat(new CraftingRecipe[] {recipeToUnlock}).ToArray();
                     }
                 }
                 catch
@@ -572,7 +581,7 @@ namespace SealTown
                     string[] seperator5 = {"+"};
                     string[] saveSplit5 = areaName.Split(seperator5, count, StringSplitOptions.None);    
                     // Index 0 of SaveSplit 5 is area name
-                    foreach (Area area in GameVariables.items.allAreas)
+                    foreach (Area area in Game.items.allAreas)
                     {
                         if (area.name == saveSplit5[0])
                         {
@@ -587,7 +596,7 @@ namespace SealTown
                         try
                         {
                             Console.Write(" " + saveSplit6[i]);
-                            Item itemToAddToArea = GameVariables.items.allItems[int.Parse(saveSplit6[i])];
+                            Item itemToAddToArea = Game.items.allItems[int.Parse(saveSplit6[i])];
                             currentArea.itemsInArea = currentArea.itemsInArea.Concat(new Item[] {itemToAddToArea}).ToArray();
                         }
                         catch
@@ -606,31 +615,31 @@ namespace SealTown
         }
         public string saveGame()
         {
-            Player player =  GameVariables.player;
+            Player player =  Game.player;
             string save = "";
             save = save + player.areaPosition.name;
             save = save + ":";
             foreach (Item item in player.inventory)
             {
-                save = save + "," + Array.IndexOf(GameVariables.items.allItems, item);
+                save = save + "," + Array.IndexOf(Game.items.allItems, item);
             }
             save = save + ":";
             foreach (CraftingRecipe recipe in player.unlockedRecipes)
             {
-                save = save + "," + Array.IndexOf(GameVariables.items.allRecipes, recipe);
+                save = save + "," + Array.IndexOf(Game.items.allRecipes, recipe);
             }
 
             save = save + ":";
             // Area items
             save = save + "=";
-            foreach (Area area in GameVariables.items.allAreas)
+            foreach (Area area in Game.items.allAreas)
             {
                 save = save + area.name;
                 // items on ground
                 save = save + "+";
                 foreach (Item item in area.itemsInArea)
                 {
-                    save = save + Array.IndexOf(GameVariables.items.allItems, item) + ",";
+                    save = save + Array.IndexOf(Game.items.allItems, item) + ",";
                 }
                 save = save + "=";
             }
@@ -665,7 +674,7 @@ namespace SealTown
             }
             Console.Write("\n");
             Thread.Sleep(400);
-            GameVariables.items.initializeItems();
+            Game.items.initializeItems();
             Console.WriteLine("Load from save? (Y/N)");
             Console.Write("> ");
             if (Console.ReadLine().ToUpper() == "Y")
@@ -696,27 +705,27 @@ namespace SealTown
                     switch (iterReturn.ToUpper())
                     {
                         case "E":
-                            GameVariables.player.displayInventory();
+                            Game.player.displayInventory();
                             break;
                         case "R":
-                            GameVariables.player.areaPosition.viewItems();
+                            Game.player.areaPosition.viewItems();
                             break;
                         case "W":
-                            Area newArea = GameVariables.player.areaPosition.moveAreas();
+                            Area newArea = Game.player.areaPosition.moveAreas();
                             if (newArea == null)
                             {
                                 Console.WriteLine("You do not have the required items to enter.");
                             }
                             else
                             {
-                                GameVariables.player.areaPosition = newArea;
+                                Game.player.areaPosition = newArea;
                             }
                             break;
                         case "T":
-                            Item[] newItem = GameVariables.player.areaPosition.takeItem();
+                            Item[] newItem = Game.player.areaPosition.takeItem();
                             try
                             {
-                                GameVariables.player.inventory = GameVariables.player.inventory.Concat(newItem).ToArray();
+                                Game.player.inventory = Game.player.inventory.Concat(newItem).ToArray();
                                 foreach (Item item in newItem)
                                 {
                                     if (item.recipeUnlocks != null)
@@ -724,7 +733,7 @@ namespace SealTown
                                         CraftingRecipe[] totalUnlocks = {};
                                         foreach (CraftingRecipe recipe in item.recipeUnlocks)
                                         {
-                                            if (Array.IndexOf(GameVariables.player.unlockedRecipes, recipe) < 0)
+                                            if (Array.IndexOf(Game.player.unlockedRecipes, recipe) < 0)
                                             {
                                                 totalUnlocks = totalUnlocks.Concat(new CraftingRecipe[] {recipe}).ToArray();
                                             }
@@ -736,7 +745,7 @@ namespace SealTown
                                             {
                                                 Console.WriteLine(" - " + recipe.name);
                                             }
-                                            GameVariables.player.unlockedRecipes = GameVariables.player.unlockedRecipes.Concat(item.recipeUnlocks).ToArray();
+                                            Game.player.unlockedRecipes = Game.player.unlockedRecipes.Concat(item.recipeUnlocks).ToArray();
                                         }
                                     }
                                 }
@@ -747,7 +756,7 @@ namespace SealTown
                             }
                             break;
                         case "Q":
-                            CraftingRecipe[] availableRecipes = GameVariables.player.unlockedRecipes;
+                            CraftingRecipe[] availableRecipes = Game.player.unlockedRecipes;
                             if (availableRecipes.Length > 0)
                             {
                                 Console.WriteLine("Available Recipes: ");
@@ -757,7 +766,7 @@ namespace SealTown
                                     Console.WriteLine(" - Items In");
                                     foreach (Item item in availableRecipes[i].itemsIn)
                                     {
-                                        Console.WriteLine("   - " + item.name + (Array.IndexOf(GameVariables.player.inventory, item) > -1 ? " (Aquired)" : ""));
+                                        Console.WriteLine("   - " + item.name + (Array.IndexOf(Game.player.inventory, item) > -1 ? " (Aquired)" : ""));
                                     }
                                     Console.WriteLine(" - Items Out");
                                     foreach (Item itemOut in availableRecipes[i].itemsOut)
@@ -768,13 +777,13 @@ namespace SealTown
                                 Console.Write("#> ");
                                 int craftID = int.Parse(Console.ReadLine());
 
-                                Item[] newInventoryItems = GameVariables.player.inventory;
+                                Item[] newInventoryItems = Game.player.inventory;
                                 foreach (Item item in availableRecipes[craftID].itemsIn)
                                 {
                                     newInventoryItems = GlobalFunctions.RemoveItemAt(newInventoryItems, Array.IndexOf(newInventoryItems, item));
                                 }
-                                GameVariables.player.inventory = newInventoryItems;
-                                GameVariables.player.inventory = GameVariables.player.inventory.Concat(availableRecipes[craftID].itemsOut).ToArray();
+                                Game.player.inventory = newInventoryItems;
+                                Game.player.inventory = Game.player.inventory.Concat(availableRecipes[craftID].itemsOut).ToArray();
 
                                 Console.WriteLine("Crafted " + availableRecipes[craftID].name);
                                 CraftingRecipe[] unlockedRecipeList = {};
@@ -792,10 +801,10 @@ namespace SealTown
                                 }
                                 foreach (CraftingRecipe recipe in unlockedRecipeList)
                                 {
-                                    if (Array.IndexOf(GameVariables.player.unlockedRecipes, recipe) < 0)
+                                    if (Array.IndexOf(Game.player.unlockedRecipes, recipe) < 0)
                                     {
                                         Console.WriteLine(" - Unlocked Recipe: " + recipe.name);
-                                        GameVariables.player.unlockedRecipes = GameVariables.player.unlockedRecipes.Concat(new CraftingRecipe[] {recipe}).ToArray();
+                                        Game.player.unlockedRecipes = Game.player.unlockedRecipes.Concat(new CraftingRecipe[] {recipe}).ToArray();
                                     }
                                 }
                                 break;
@@ -807,7 +816,7 @@ namespace SealTown
                             }
                         case "A":
                             Console.WriteLine("Areas Accessible: ");
-                            foreach (Area area in GameVariables.player.areaPosition.accessibleAreas)
+                            foreach (Area area in Game.player.areaPosition.accessibleAreas)
                             {
                                 Console.WriteLine(area.name);
                                 Console.WriteLine(" - Items Required to Enter");
@@ -843,9 +852,9 @@ namespace SealTown
                             break;
                         case "S":
                             Console.WriteLine("Generators In Area: ");
-                            for (int i=0;i<GameVariables.player.areaPosition.generatorsInArea.Length; i++)
+                            for (int i=0;i<Game.player.areaPosition.generatorsInArea.Length; i++)
                             {
-                                Generator gen = GameVariables.player.areaPosition.generatorsInArea[i];
+                                Generator gen = Game.player.areaPosition.generatorsInArea[i];
                                 Console.WriteLine(gen.name + " " + i.ToString());
                                 Console.WriteLine("- Required To Use");
                                 try
@@ -863,17 +872,17 @@ namespace SealTown
                             }
                             Console.Write("#> ");
                             int generatorChosen = int.Parse(Console.ReadLine());
-                            Item[] itemsRecievedFromGenerator = GameVariables.player.areaPosition.generatorsInArea[generatorChosen].takeItem(GameVariables.player.inventory);
+                            Item[] itemsRecievedFromGenerator = Game.player.areaPosition.generatorsInArea[generatorChosen].takeItem(Game.player.inventory);
                             if (itemsRecievedFromGenerator != null)
                             {
-                                GameVariables.player.inventory = GameVariables.player.inventory.Concat(itemsRecievedFromGenerator).ToArray();
+                                Game.player.inventory = Game.player.inventory.Concat(itemsRecievedFromGenerator).ToArray();
                             }
                             break;
                         case "D":
                             Console.WriteLine("Generators In Area: ");
-                            for (int i=0;i<GameVariables.player.areaPosition.generatorsInArea.Length; i++)
+                            for (int i=0;i<Game.player.areaPosition.generatorsInArea.Length; i++)
                             {
-                                Generator gen = GameVariables.player.areaPosition.generatorsInArea[i];
+                                Generator gen = Game.player.areaPosition.generatorsInArea[i];
                                 Console.WriteLine(gen.name + " " + i.ToString());
                                 Console.WriteLine(" - Items Needed To Start");
                                 try
@@ -891,17 +900,17 @@ namespace SealTown
                             }
                             Console.Write("#> ");
                             int generatorChosen2 = int.Parse(Console.ReadLine());
-                            GameVariables.player.areaPosition.generatorsInArea[generatorChosen2].startGenerator(GameVariables.player.inventory);
+                            Game.player.areaPosition.generatorsInArea[generatorChosen2].startGenerator(Game.player.inventory);
                             break;
                         case "Z":
                             Console.WriteLine("Unlocked Recipes: ");
-                            foreach (CraftingRecipe recipe in GameVariables.player.unlockedRecipes)
+                            foreach (CraftingRecipe recipe in Game.player.unlockedRecipes)
                             {
                                 Console.WriteLine(recipe.name);
                                 Console.WriteLine(" - Items In");
                                 foreach (Item item in recipe.itemsIn)
                                 {
-                                    Console.WriteLine("   - " + item.name + (Array.IndexOf(GameVariables.player.inventory, item) > -1 ? " (Aquired)" : ""));
+                                    Console.WriteLine("   - " + item.name + (Array.IndexOf(Game.player.inventory, item) > -1 ? " (Aquired)" : ""));
                                 }
                                 Console.WriteLine(" - Items Out");
                                 foreach (Item item in recipe.itemsOut)
@@ -911,12 +920,12 @@ namespace SealTown
                             }
                             break;
                         case "O":
-                            if (GameVariables.player.areaPosition.questsInArea == null)
+                            if (Game.player.areaPosition.questsInArea == null)
                             {
                                 Console.WriteLine("No available quests in this area at the moment. Check back later!");
                                 break;
                             }
-                            Area areaCurr = GameVariables.player.areaPosition;
+                            Area areaCurr = Game.player.areaPosition;
                             int index = 0;
                             foreach (Quest quest in areaCurr.questsInArea)
                             {
@@ -932,7 +941,7 @@ namespace SealTown
                             Console.Write(this.saveGame() + "\n");
                             break;
                         case "..": /* ----- DEBUG MODE ----- */
-                            if (GameVariables.debugAuth == false)
+                            if (Game.debugAuth == false)
                             {
                                 Console.WriteLine("Authentication is required. Please enter your username and passcode.");
                                 Console.Write("Username > ");
@@ -942,7 +951,7 @@ namespace SealTown
                                 if (username == "Sealmichael" && password == "Iloveseals1")
                                 {
                                     Console.WriteLine("Valid Authentication.");
-                                    GameVariables.debugAuth = true;
+                                    Game.debugAuth = true;
                                 }
                                 else
                                 {
@@ -965,7 +974,7 @@ namespace SealTown
                                         string recipeName = Console.ReadLine();
         
                                         CraftingRecipe recipeToFetch = null;
-                                        foreach (CraftingRecipe recipe in GameVariables.items.allRecipes)
+                                        foreach (CraftingRecipe recipe in Game.items.allRecipes)
                                         {
                                             if (recipe.name.ToUpper() == recipeName.ToUpper())
                                             {
@@ -977,7 +986,7 @@ namespace SealTown
                                             Console.WriteLine("Couldn't find that recipe.");
                                             break;
                                         }
-                                        GameVariables.player.inventory = GameVariables.player.inventory.Concat(recipeToFetch.itemsOut).ToArray();
+                                        Game.player.inventory = Game.player.inventory.Concat(recipeToFetch.itemsOut).ToArray();
                                         Console.WriteLine("Added " + recipeToFetch.name + " to inventory.");
                                         break;
                                     case "W":
@@ -986,7 +995,7 @@ namespace SealTown
                                         string recipeName2 = Console.ReadLine();
         
                                         CraftingRecipe recipeToFetch2 = null;
-                                        foreach (CraftingRecipe recipe in GameVariables.items.allRecipes)
+                                        foreach (CraftingRecipe recipe in Game.items.allRecipes)
                                         {
                                             if (recipe.name.ToUpper() == recipeName2.ToUpper())
                                             {
@@ -1011,8 +1020,8 @@ namespace SealTown
                                         }
                                         break;
                                     case "S":
-                                        Console.WriteLine("All Recipes: (Current Amount: " + GameVariables.items.allRecipes.Length.ToString() + ")");
-                                        foreach (CraftingRecipe recipe in  GameVariables.items.allRecipes)
+                                        Console.WriteLine("All Recipes: (Current Amount: " + Game.items.allRecipes.Length.ToString() + ")");
+                                        foreach (CraftingRecipe recipe in  Game.items.allRecipes)
                                         {
                                             Console.WriteLine(recipe.name);
                                             Console.WriteLine(" - Items In");
@@ -1028,13 +1037,13 @@ namespace SealTown
                                         }
                                         break;
                                     case "Z":
-                                        Area currentArea = GameVariables.player.areaPosition;
+                                        Area currentArea = Game.player.areaPosition;
                                         
                                         Console.WriteLine("Enter recipe name to add.");
                                         Console.Write("> ");
                                         string recipeNameToAdd = Console.ReadLine();
                                         CraftingRecipe recipeAdd = null;
-                                        foreach (CraftingRecipe recipe in GameVariables.items.allRecipes)
+                                        foreach (CraftingRecipe recipe in Game.items.allRecipes)
                                         {
                                             if (recipe.name == recipeNameToAdd)
                                             {
@@ -1047,11 +1056,11 @@ namespace SealTown
                                         debugMenu = false;
                                         break;
                                     case "\\":
-                                        GameVariables.DebugMode = true;
+                                        Game.DebugMode = true;
                                         Console.WriteLine("Debug mode enabled.");
                                         break;
                                     case "\\\\":
-                                        GameVariables.DebugMode = false;
+                                        Game.DebugMode = false;
                                         Console.WriteLine("Debug mode disabled.");
                                         break;
                                     case "X":
@@ -1059,7 +1068,7 @@ namespace SealTown
                                         Console.Write("> ");
                                         string inputName = Console.ReadLine();
                                         Area areaToTeleport = null;
-                                        foreach (Area area in GameVariables.items.allAreas)
+                                        foreach (Area area in Game.items.allAreas)
                                         {
                                             if (area.name == inputName)
                                             {
@@ -1072,7 +1081,7 @@ namespace SealTown
                                         }
                                         else
                                         {
-                                            GameVariables.player.areaPosition = areaToTeleport;
+                                            Game.player.areaPosition = areaToTeleport;
                                         }
                                         break;
                                 }
@@ -1089,7 +1098,7 @@ namespace SealTown
                     // Console.WriteLine("Something went wrong.");
                     Console.WriteLine("----------");
                     Console.WriteLine("Invalid input.");
-                    if (GameVariables.DebugMode)
+                    if (Game.DebugMode)
                     {
                         Console.WriteLine(e);
                         Console.WriteLine("You are seing this because debug mode is enabled");
@@ -1102,7 +1111,7 @@ namespace SealTown
     {
         static void Main()
         {
-            Game game = new Game();
+            GameSession game = new GameSession();
             game.Run();
         }
     }
@@ -1268,6 +1277,9 @@ namespace SealTown
         public Generator greenGenerator = new Generator();
         public Generator blueGenerator = new Generator();
 
+        // Quests
+        public Quest testQuest = new Quest();
+
         // This is called on game start
         public void initializeItems()
         {
@@ -1399,6 +1411,11 @@ namespace SealTown
             sandPaper.create("Sand Paper", 1);
             sandPaperRecipe.create("Sand Paper", new Item[] {stone, grindedStone, fire}, new Item[] {sandPaper}, null);
 
+            // Quests
+            // string newName, Item[] newItemsToComplete, string newRewardType, Item[] newItemReward, CraftingRecipe[] newRecipeReward, Generator[] newGeneratorReward, string[] newDialogue1, string[] newDialogue2, string[] newDialogue3
+
+            testQuest.create("Test Quest", new Item[] {wood}, "item", new Item[] {stone}, null, null, new string[] {"Sup"}, new string[] {"Sup2"}, new string[] {"Sup3"});
+
             this.allRecipes = new CraftingRecipe[] {
                 this.fireRecipe, // Base materials
                 this.ironIngotRecipe, this.moltenIronRecipe, this.ironDaggerRecipe, this.ironSwordRecipe, // Iron Products
@@ -1438,7 +1455,7 @@ namespace SealTown
             };
 
             // (name) (items) (accessibleAreas) (generators) (required to enter)
-            Base.create("Base", new Item[] {wood, coal, stone, stone, ironOre}, new Area[] {CC, RVillage}, new Generator[] {woodGenerator, coalGenerator}, null);
+            Base.create("Base", new Item[] {wood, coal, stone, stone, ironOre}, new Area[] {CC, RVillage}, new Generator[] {woodGenerator, coalGenerator}, null, new Quest[] {testQuest});
             CC.create("Crystal Caverns", new Item[] {water, water}, new Area[] {CC2, Base}, new Generator[] {stoneGenerator, coalGenerator, fireGenerator}, new Item[] {stoneHammer});
             CC2.create("Crystal Caverns 2", new Item[] {water, water}, new Area[] {CC, Passage1}, new Generator[] {stoneGenerator, coalGenerator, fireGenerator, tungstenGenerator}, new Item[] {stoneHammer});
             RVillage.create("Rainstorm Village", new Item[] {}, new Area[] {Base}, new Generator[] {waterGenerator, fireGenerator}, new Item[] {stoneChisel});
