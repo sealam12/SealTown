@@ -648,7 +648,7 @@ namespace SealTown
         }
         public string gameIteration()
         {
-            Console.WriteLine("Craft | Q\nMove | W\nInventory | E\nView Items | R\nPickup Items | T\nInspect Areas | A\nUse Generator | S\nStart Generator | D\nView Unlocked Recipes | Z\nView Available Quests | O\nView Current Quests | P\nSupply Quest | I\nSave Game | =\nEnd Game | \\");
+            Console.WriteLine("Craft | Q\nMove | W\nInventory | E\nView Items | R\nPickup Items | T\nInspect Areas | A\nUse Generator | S\nStart Generator | D\nView Unlocked Recipes | Z\nQuests | O\nSave Game | =\nEnd Game | \\");
             Console.Write("> ");
             return Console.ReadLine();
         }
@@ -920,19 +920,18 @@ namespace SealTown
                             }
                             break;
                         case "O":
+                            Console.WriteLine("Available Quests: ");
                             if (Game.player.areaPosition.questsInArea == null)
                             {
-                                Console.WriteLine("No available quests in this area at the moment. Check back later!");
+                                Console.WriteLine(" - No available quests in this area at the moment. Check back later!");
                                 break;
                             }
                             Area areaCurr = Game.player.areaPosition;
-                            int index = 0;
                             foreach (Quest quest in areaCurr.questsInArea)
                             {
                                 if (!quest.finished)
                                 {
-                                    Console.WriteLine(quest.name +  " " + index);
-                                    index += 1;
+                                    Console.WriteLine(" - " + quest.name);
                                 }
                             }
                             break;
